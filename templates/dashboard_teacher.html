@@ -3,6 +3,18 @@
 
 <h2>{{ 'Admin Dashboard' if session_role == 'admin' else 'Teacher Dashboard' }}</h2>
 
+{% if status_msg %}
+<div class="card" style="border-left:4px solid #1b7f3a; margin-bottom:14px;">
+    <strong style="color:#1b7f3a;">{{ status_msg }}</strong>
+</div>
+{% endif %}
+
+{% if error_msg %}
+<div class="card" style="border-left:4px solid #b42318; margin-bottom:14px;">
+    <strong style="color:#b42318;">{{ error_msg }}</strong>
+</div>
+{% endif %}
+
 <div style="display:flex; gap:20px; flex-wrap:wrap;">
 
     <div class="card" style="width:220px;">
@@ -28,7 +40,18 @@
 </div>
 
 <br>
-<a href="/mark-attendance" class="btn">Mark Attendance (Face)</a>
+<a href="/teacher/face-attendance" class="btn">Face Attendance (Online/Offline)</a>
+<a href="/mark-attendance" class="btn" style="margin-left:8px;">Local Webcam Mode</a>
+
+<div class="card" style="margin-top:16px;">
+    <h3>Manual Attendance (Cloud Safe)</h3>
+    <p style="margin-top:6px;">If cloud camera is unavailable, enter student ID and mark attendance.</p>
+    <form action="/mark-attendance-manual" method="post" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input type="text" name="student_id" placeholder="Enter Student ID" required
+               style="padding:10px 12px; border:1px solid #ccc; border-radius:8px; min-width:220px;">
+        <button type="submit" class="btn">Mark Manually</button>
+    </form>
+</div>
 
 <div class="card" style="margin-top:20px;">
     <h3>Recent Attendance Activity</h3>

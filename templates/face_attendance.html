@@ -1,0 +1,77 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Face Attendance (Browser Webcam)</h2>
+
+<div class="card" style="margin-bottom:16px;">
+    {% if is_cloud %}
+    <p><strong>Cloud mode:</strong> Camera runs in your browser and sends frames for recognition.</p>
+    {% else %}
+    <p><strong>Local mode:</strong> You can use this browser camera mode, or Local Webcam mode from dashboard.</p>
+    {% endif %}
+    <p>Allow camera permission, keep one student's face clearly visible, then click capture.</p>
+</div>
+
+<div class="card" style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;">
+    <video id="camera" autoplay playsinline width="420" style="border-radius:10px; background:#111;"></video>
+    <canvas id="snapshot" width="420" height="315" style="display:none;"></canvas>
+    <div style="min-width:260px;">
+        <button class="btn" id="startCamBtn" type="button">Start Camera</button>
+        <button class="btn" id="markBtn" type="button" style="margin-left:8px;">Capture & Mark</button>
+        <p id="status" style="margin-top:14px; font-weight:600; color:#1b2a49;">Waiting...</p>
+    </div>
+</div>
+
+<script>
+const video = document.getElementById("camera");
+const canvas = document.getElementById("snapshot");
+const statusEl = document.getElementById("status");
+let stream = null;
+
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        statusEl.textContent = "Camera started. Ready to capture.";
+        statusEl.style.color = "#1b2a49";
+    } catch (e) {
+        statusEl.textContent = "Camera permission denied or no camera found.";
+        statusEl.style.color = "#b42318";
+    }
+}
+
+async function captureAndMark() {
+    if (!stream) {
+        statusEl.textContent = "Start camera first.";
+        statusEl.style.color = "#b42318";
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL("image/jpeg", 0.9);
+
+    statusEl.textContent = "Processing face...";
+    statusEl.style.color = "#1b2a49";
+
+    try {
+        const res = await fetch("/teacher/face-attendance/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: imageData })
+        });
+
+        const data = await res.json();
+        statusEl.textContent = data.message || "Done";
+        statusEl.style.color = data.ok ? "#1b7f3a" : "#b42318";
+    } catch (e) {
+        statusEl.textContent = "Server error while verifying face.";
+        statusEl.style.color = "#b42318";
+    }
+}
+
+document.getElementById("startCamBtn").addEventListener("click", startCamera);
+document.getElementById("markBtn").addEventListener("click", captureAndMark);
+</script>
+
+{% endblock %}

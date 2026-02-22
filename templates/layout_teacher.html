@@ -34,7 +34,7 @@ body{margin:0;font-family:Arial;background:#eef1f5}
 <h2>{{ 'Admin Panel' if session_role == 'admin' else 'Teacher Panel' }}</h2>
 <div class="meta">{{ session_role|title }}: {{ session_display_name or '-' }}</div>
 <a href="/teacher/dashboard">Dashboard</a>
-<a href="/mark-attendance">Mark Attendance</a>
+<a href="/teacher/face-attendance">Face Attendance</a>
 <a href="/teacher/monthly-graph">Monthly Graph</a>
 <a href="/upload-syllabus">Upload Syllabus</a>
 <a href="/teacher/upload-notes">Upload Notes</a>

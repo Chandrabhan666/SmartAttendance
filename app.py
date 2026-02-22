@@ -1,14 +1,16 @@
 from functools import wraps
-from flask import Flask, render_template, request, redirect, session, send_from_directory, url_for
+from flask import Flask, render_template, request, redirect, session, send_from_directory, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import datetime
+import base64
 import json
 import os
 import random
 import requests
+import numpy as np
 
 try:
     import cv2
@@ -567,6 +569,8 @@ def teacher_dashboard():
         Attendance.query.order_by(Attendance.date.desc(), Attendance.time.desc()).limit(10).all()
     )
     recent_records = [(r.student_id, r.date, r.time) for r in recent_rows]
+    status_msg = request.args.get("status", "")
+    error_msg = request.args.get("error", "")
 
     return render_template(
         "dashboard_teacher.html",
@@ -575,14 +579,20 @@ def teacher_dashboard():
         today_attendance=today_attendance,
         today_absent=today_absent,
         recent_records=recent_records,
+        status_msg=status_msg,
+        error_msg=error_msg,
     )
 
 
 @app.route("/mark-attendance")
 @require_roles("teacher", "admin")
 def mark_attendance():
+    # On cloud hosting (Render), server has no physical webcam.
+    if os.environ.get("RENDER") == "true":
+        return redirect("/teacher/dashboard?error=Cloud server has no camera. Use manual attendance below.")
+
     if cv2 is None or not os.path.exists("model/face_model.xml"):
-        return "Face model not found"
+        return redirect("/teacher/dashboard?error=Face model not found. Train model locally first.")
 
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     recognizer.read("model/face_model.xml")
@@ -591,7 +601,7 @@ def mark_attendance():
 
     cam = cv2.VideoCapture(0)
     if not cam.isOpened():
-        return "Camera not available. Check camera permissions."
+        return redirect("/teacher/dashboard?error=Camera not available. Check local camera permissions.")
 
     show_preview = True
     start_time = datetime.datetime.now()
@@ -611,24 +621,16 @@ def mark_attendance():
         for (x, y, w, h) in faces:
             label, _ = recognizer.predict(gray[y: y + h, x: x + w])
             sid = str(label)
-
-            if Student.query.filter_by(student_id=sid).first():
-                now = datetime.datetime.now()
-                db.session.add(
-                    Attendance(
-                        student_id=sid,
-                        date=now.strftime("%Y-%m-%d"),
-                        time=now.strftime("%H:%M:%S"),
-                    )
-                )
-                db.session.commit()
+            ok, msg = _mark_attendance_once(sid)
 
             cam.release()
             try:
                 cv2.destroyAllWindows()
             except cv2.error:
                 pass
-            return redirect("/teacher/dashboard")
+            if ok:
+                return redirect(f"/teacher/dashboard?status={msg}")
+            return redirect(f"/teacher/dashboard?error={msg}")
 
         if show_preview:
             try:
@@ -645,6 +647,113 @@ def mark_attendance():
     except cv2.error:
         pass
     return redirect("/teacher/dashboard")
+
+
+def _load_face_tools():
+    if cv2 is None:
+        return None, None, "OpenCV is not available on server."
+    if not hasattr(cv2, "face"):
+        return None, None, "OpenCV face module is not available."
+    if not os.path.exists("model/face_model.xml"):
+        return None, None, "Face model not found. Train model locally first."
+
+    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    recognizer.read("model/face_model.xml")
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    return recognizer, face_cascade, None
+
+
+def _mark_attendance_once(student_id):
+    student = Student.query.filter_by(student_id=student_id).first()
+    if not student:
+        return False, "Student ID not found."
+
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    exists_today = Attendance.query.filter_by(student_id=student_id, date=today).first()
+    if exists_today:
+        return True, "Attendance already marked for today."
+
+    now = datetime.datetime.now()
+    db.session.add(
+        Attendance(
+            student_id=student_id,
+            date=now.strftime("%Y-%m-%d"),
+            time=now.strftime("%H:%M:%S"),
+        )
+    )
+    db.session.commit()
+    return True, "Attendance marked successfully."
+
+
+@app.route("/teacher/face-attendance")
+@require_roles("teacher", "admin")
+def teacher_face_attendance():
+    is_cloud = os.environ.get("RENDER") == "true"
+    return render_template("face_attendance.html", is_cloud=is_cloud)
+
+
+@app.route("/teacher/face-attendance/verify", methods=["POST"])
+@require_roles("teacher", "admin")
+def teacher_face_attendance_verify():
+    recognizer, face_cascade, err = _load_face_tools()
+    if err:
+        return jsonify({"ok": False, "message": err}), 400
+
+    payload = request.get_json(silent=True) or {}
+    image_data = payload.get("image", "")
+    if not image_data or "," not in image_data:
+        return jsonify({"ok": False, "message": "Invalid image payload."}), 400
+
+    try:
+        encoded = image_data.split(",", 1)[1]
+        frame_bytes = base64.b64decode(encoded)
+        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
+        frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+    except Exception:
+        return jsonify({"ok": False, "message": "Failed to decode image."}), 400
+
+    if frame is None:
+        return jsonify({"ok": False, "message": "Empty frame received."}), 400
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    if len(faces) == 0:
+        return jsonify({"ok": False, "message": "No face detected. Keep face in frame."}), 200
+
+    best_sid = None
+    best_conf = None
+    for (x, y, w, h) in faces:
+        sid_label, confidence = recognizer.predict(gray[y: y + h, x: x + w])
+        sid = str(sid_label)
+        if confidence <= 80 and Student.query.filter_by(student_id=sid).first():
+            if best_conf is None or confidence < best_conf:
+                best_conf = confidence
+                best_sid = sid
+
+    if not best_sid:
+        return jsonify({"ok": False, "message": "Face not recognized. Try better lighting/angle."}), 200
+
+    ok, msg = _mark_attendance_once(best_sid)
+    return jsonify(
+        {
+            "ok": ok,
+            "message": msg,
+            "student_id": best_sid,
+            "confidence": round(float(best_conf), 2) if best_conf is not None else None,
+        }
+    )
+
+
+@app.route("/mark-attendance-manual", methods=["POST"])
+@require_roles("teacher", "admin")
+def mark_attendance_manual():
+    sid = request.form.get("student_id", "").strip()
+    if not sid:
+        return redirect("/teacher/dashboard?error=Please enter a student ID.")
+    ok, msg = _mark_attendance_once(sid)
+    if ok:
+        return redirect(f"/teacher/dashboard?status={msg}")
+    return redirect(f"/teacher/dashboard?error={msg}")
 
 
 @app.route("/teacher/monthly-graph")
