@@ -23,8 +23,16 @@ raw_db_url = os.environ.get("DATABASE_URL", "sqlite:///attendance.db")
 if raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
+if raw_db_url.startswith("postgresql://") and "sslmode=" not in raw_db_url:
+    sep = "&" if "?" in raw_db_url else "?"
+    raw_db_url = f"{raw_db_url}{sep}sslmode=require"
+
 app.config["SQLALCHEMY_DATABASE_URI"] = raw_db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+}
 
 AUTH_FILE = "auth_users.json"
 STUDENT_FILE = "student_data.json"
