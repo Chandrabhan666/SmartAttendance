@@ -33,6 +33,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
     "pool_recycle": 280,
+    "connect_args": {"connect_timeout": 10},
 }
 
 AUTH_FILE = "auth_users.json"
@@ -333,7 +334,10 @@ def login_student():
         sid = request.form["student_id"].strip()
         password = request.form["password"]
 
-        user = User.query.filter_by(role="student", username=sid).first()
+        try:
+            user = User.query.filter_by(role="student", username=sid).first()
+        except SQLAlchemyError:
+            return render_template("login_student.html", error="Server busy. Please try again in a few seconds.")
 
         if user and user.password == password:
             session.clear()
@@ -353,7 +357,10 @@ def login_parent():
         username = request.form["username"].strip()
         password = request.form["password"]
 
-        parent_rows = User.query.filter_by(role="parent", username=username).all()
+        try:
+            parent_rows = User.query.filter_by(role="parent", username=username).all()
+        except SQLAlchemyError:
+            return render_template("login_parent.html", error="Server busy. Please try again in a few seconds.")
         if parent_rows and parent_rows[0].password == password:
             linked_students = [row.linked_student_id for row in parent_rows if row.linked_student_id]
 
@@ -375,7 +382,10 @@ def login_teacher():
         username = request.form["username"].strip()
         password = request.form["password"]
 
-        user = User.query.filter_by(role="teacher", username=username).first()
+        try:
+            user = User.query.filter_by(role="teacher", username=username).first()
+        except SQLAlchemyError:
+            return render_template("login_teacher.html", error="Server busy. Please try again in a few seconds.")
         if user and user.password == password:
             session.clear()
             session["role"] = "teacher"
@@ -394,7 +404,10 @@ def login_admin():
         username = request.form["username"].strip()
         password = request.form["password"]
 
-        user = User.query.filter_by(role="admin", username=username).first()
+        try:
+            user = User.query.filter_by(role="admin", username=username).first()
+        except SQLAlchemyError:
+            return render_template("login_admin.html", error="Server busy. Please try again in a few seconds.")
         if user and user.password == password:
             session.clear()
             session["role"] = "admin"
@@ -763,6 +776,11 @@ def view_pdf(name):
 def logout():
     session.clear()
     return redirect("/login")
+
+
+@app.route("/healthz")
+def healthz():
+    return "ok", 200
 
 
 if __name__ == "__main__":
