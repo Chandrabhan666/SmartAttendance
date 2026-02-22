@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import Flask, render_template, request, redirect, session, send_from_directory, url_for
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import datetime
@@ -243,8 +244,13 @@ def seed_data():
 
 def init_db():
     with app.app_context():
-        db.create_all()
-        seed_data()
+        try:
+            db.create_all()
+            seed_data()
+        except SQLAlchemyError as exc:
+            # Keep web process alive even if DB is temporarily unreachable.
+            # This allows Render health checks and manual retry without crash loops.
+            app.logger.error("Database init failed at startup: %s", exc)
 
 
 init_db()
