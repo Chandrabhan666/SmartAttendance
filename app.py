@@ -2,6 +2,7 @@ from functools import wraps
 from flask import Flask, render_template, request, redirect, session, send_from_directory, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 import datetime
 import json
 import os
@@ -12,6 +13,8 @@ try:
     import cv2
 except Exception:
     cv2 = None
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "college_secret_key")
