@@ -1,0 +1,4 @@
+body { margin:0; font-family:Arial; display:flex; }
+.sidebar { width:220px; background:#003366; color:white; height:100vh; padding:15px; }
+.sidebar a { color:white; display:block; margin:10px 0; text-decoration:none; }
+.content { padding:30px; width:100%; }

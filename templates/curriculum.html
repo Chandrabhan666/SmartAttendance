@@ -1,0 +1,29 @@
+{% extends "layout_student.html" %}
+{% block content %}
+
+<h2>Curriculum / Syllabus</h2>
+
+<table border="1" cellpadding="12" style="width:100%; background:white;">
+<tr>
+    <th>Subject</th>
+    <th>PDF</th>
+</tr>
+
+{% for item in resources %}
+<tr>
+    <td>{{ item.subject or 'Subject' }}</td>
+    <td>
+        <a href="/resource/{{ item.id }}" target="_blank">
+            Download / View
+        </a>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="2">No syllabus uploaded yet.</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

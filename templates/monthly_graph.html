@@ -1,0 +1,23 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Monthly Attendance</h2>
+
+<canvas id="chart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById("chart"), {
+    type: "bar",
+    data: {
+        labels: {{ bar_labels | tojson }},
+        datasets: [{
+            label: "Attendance",
+            data: {{ bar_values | tojson }},
+            backgroundColor: "#003366"
+        }]
+    }
+});
+</script>
+
+{% endblock %}

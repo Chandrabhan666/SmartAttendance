@@ -1,0 +1,20 @@
+{% extends "layout_student.html" %}
+{% block content %}
+
+<h2>Notes</h2>
+
+{% if resources|length == 0 %}
+<p>No notes uploaded yet.</p>
+{% else %}
+<ul>
+{% for item in resources %}
+    <li>
+        <a href="/resource/{{ item.id }}" target="_blank">
+            {{ item.subject or 'Notes' }}{% if item.topic %} - {{ item.topic }}{% endif %} ({{ item.file_name }})
+        </a>
+    </li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

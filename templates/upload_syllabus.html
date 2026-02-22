@@ -1,0 +1,22 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Upload Syllabus (PDF)</h2>
+
+<form method="POST" enctype="multipart/form-data"
+      style="background:#fff;padding:20px;border-radius:10px;width:400px">
+
+    <label>Subject Name</label><br>
+    <input type="text" name="subject" required
+           style="width:100%;padding:8px"><br><br>
+
+    <label>Select PDF</label><br>
+    <input type="file" name="file" accept="application/pdf" required><br><br>
+
+    <button type="submit"
+            style="padding:10px 20px;background:#003366;color:white;border:none">
+        Upload
+    </button>
+</form>
+
+{% endblock %}

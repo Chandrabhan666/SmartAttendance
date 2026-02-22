@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartAttendance Login Portal</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(130deg, #0f1e3d, #1f5f8b);
+            font-family: Arial, sans-serif;
+            color: #0f172a;
+        }
+
+        .box {
+            width: min(920px, 92vw);
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 26px;
+            box-shadow: 0 24px 55px rgba(0, 0, 0, 0.28);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            color: #0b2545;
+        }
+
+        p {
+            margin: 0 0 22px;
+            color: #475569;
+        }
+
+        .roles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .role {
+            display: block;
+            text-decoration: none;
+            color: #0f172a;
+            border: 1px solid #dbe4f0;
+            border-radius: 12px;
+            padding: 16px;
+            background: #f8fbff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .role:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+            border-color: #9cb3d3;
+        }
+
+        .role h3 {
+            margin: 0 0 8px;
+            color: #0b2545;
+        }
+
+        .role span {
+            color: #4b5563;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>SmartAttendance Access Portal</h1>
+    <p>Choose your role and continue with your credentials.</p>
+
+    <div class="roles">
+        <a class="role" href="/login/student">
+            <h3>Student Login</h3>
+            <span>View attendance and academic resources.</span>
+        </a>
+        <a class="role" href="/login/parent">
+            <h3>Parent Login</h3>
+            <span>Track child attendance and updates.</span>
+        </a>
+        <a class="role" href="/login/teacher">
+            <h3>Teacher Login</h3>
+            <span>Mark attendance and publish academic content.</span>
+        </a>
+        <a class="role" href="/login/admin">
+            <h3>Admin Login</h3>
+            <span>Manage full staff-level controls.</span>
+        </a>
+    </div>
+</div>
+</body>
+</html>

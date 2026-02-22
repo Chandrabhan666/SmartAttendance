@@ -1,0 +1,28 @@
+{% extends "layout_student.html" %}
+{% block content %}
+
+<h2>Parent Dashboard</h2>
+
+{% if children|length == 0 %}
+<div class="card">
+    <h3>No children linked</h3>
+    <p>Ask admin to map your parent account with student IDs.</p>
+</div>
+{% else %}
+<div style="display:flex; gap:20px; flex-wrap:wrap;">
+{% for child in children %}
+    <div class="card" style="width:300px;">
+        <h3>{{ child.name }}</h3>
+        <p><b>ID:</b> {{ child.id }}</p>
+        <p><b>Branch:</b> {{ child.branch }}</p>
+        <p><b>Year:</b> {{ child.year }}</p>
+        <p><b>Today:</b> {{ child.today_status }}</p>
+        <p><b>Total Marks:</b> {{ child.total }}</p>
+        <a href="/student/dashboard?student_id={{ child.id }}">Open Child Dashboard</a><br>
+        <a href="/student/attendance?student_id={{ child.id }}">View Child Attendance</a>
+    </div>
+{% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

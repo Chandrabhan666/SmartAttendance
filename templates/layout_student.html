@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Portal</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+        }
+
+        .navbar {
+            background: #002b5b;
+            padding: 14px 18px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: opacity 0.2s ease;
+        }
+
+        .navbar a:hover {
+            opacity: 0.8;
+        }
+
+        .navbar .session {
+            margin-left: auto;
+            color: #dbeafe;
+            font-size: 13px;
+        }
+
+        .switcher {
+            margin-left: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #dbeafe;
+            font-size: 13px;
+        }
+
+        .switcher select {
+            border: 0;
+            border-radius: 4px;
+            padding: 4px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        th {
+            background: #002b5b;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="navbar">
+    {% if session_role == 'parent' %}
+        <a href="/parent/dashboard">Parent Dashboard</a>
+        <a href="/student/dashboard">Child Dashboard</a>
+        <a href="/student/attendance">Child Attendance</a>
+    {% else %}
+        <a href="/student/dashboard">Dashboard</a>
+        <a href="/student/attendance">My Attendance</a>
+    {% endif %}
+
+    <a href="/routine">Routine</a>
+    <a href="/activity">Activity</a>
+    <a href="/notes">Notes</a>
+    <a href="/announcements">Announcements</a>
+    <a href="/curriculum">Curriculum</a>
+    <a href="/logout">Logout</a>
+
+    {% if session_role == 'parent' and parent_students|length > 1 %}
+    <form class="switcher" method="GET" action="/student/dashboard">
+        <label for="student_id">Child:</label>
+        <select id="student_id" name="student_id" onchange="this.form.submit()">
+            {% for sid in parent_students %}
+            <option value="{{ sid }}" {% if selected_student_id == sid %}selected{% endif %}>{{ sid }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+
+    <span class="session">{{ session_role|title if session_role else 'Guest' }}: {{ session_display_name or '-' }}</span>
+</div>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

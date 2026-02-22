@@ -1,0 +1,29 @@
+{% extends "layout_student.html" %}
+{% block content %}
+
+<h2>
+{% if session_role == 'parent' and student %}
+Attendance - {{ student.name }}
+{% else %}
+My Attendance
+{% endif %}
+</h2>
+
+<table>
+<tr>
+    <th>Date</th>
+    <th>Time</th>
+</tr>
+{% for d,t in attendance %}
+<tr>
+    <td>{{ d }}</td>
+    <td>{{ t }}</td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="2">No attendance records</td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock %}

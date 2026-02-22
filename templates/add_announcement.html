@@ -1,0 +1,20 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Add Announcement</h2>
+
+<form method="POST"
+      style="background:white;padding:20px;border-radius:10px;width:500px">
+
+    <label>Title</label><br>
+    <input type="text" name="title" required style="width:100%"><br><br>
+
+    <label>Description</label><br>
+    <textarea name="description" rows="5" required style="width:100%"></textarea><br><br>
+
+    <button style="padding:10px 20px;background:#003366;color:white;border:none">
+        Publish
+    </button>
+</form>
+
+{% endblock %}

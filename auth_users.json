@@ -1,0 +1,51 @@
+{
+    "admins": {
+        "admin": {
+            "password": "0010",
+            "name": "System Admin"
+        }
+    },
+    "teachers": {
+        "teacher1": {
+            "password": "teach123",
+            "name": "Default Teacher"
+        }
+    },
+    "parents": {
+        "12312037": {
+            "password": "2037",
+            "name": "Parent of Rahul Patel",
+            "students": [
+                "12312037"
+            ]
+        },
+        "12315493": {
+            "password": "5493",
+            "name": "Parent of Priyam",
+            "students": [
+                "12315493"
+            ]
+        },
+        "12313534": {
+            "password": "3534",
+            "name": "Parent of Arushree",
+            "students": [
+                "12313534"
+            ]
+        }
+    },
+    "students": {
+        "12312037": {
+            "password": "2037",
+            "name": "Rahul Patel"
+        },
+        "12315493": {
+            "password": "5493",
+            "name": "Priyam"
+        },
+        "12313534": {
+            "password": "3534",
+            "name": "Arushree"
+        }
+    }
+}

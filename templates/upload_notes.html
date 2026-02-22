@@ -1,0 +1,23 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Upload Notes</h2>
+
+<form method="POST" enctype="multipart/form-data"
+      style="background:#fff;padding:20px;border-radius:10px;width:400px">
+
+    <label>Subject</label><br>
+    <input type="text" name="subject" required style="width:100%"><br><br>
+
+    <label>Topic</label><br>
+    <input type="text" name="topic" required style="width:100%"><br><br>
+
+    <label>PDF File</label><br>
+    <input type="file" name="file" accept="application/pdf" required><br><br>
+
+    <button style="padding:10px 20px;background:#003366;color:white;border:none">
+        Upload Notes
+    </button>
+</form>
+
+{% endblock %}

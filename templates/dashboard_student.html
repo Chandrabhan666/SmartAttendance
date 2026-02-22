@@ -1,0 +1,54 @@
+{% extends "layout_student.html" %}
+{% block content %}
+
+{% if no_data %}
+<div class="card">
+    <h3>No linked student found</h3>
+    <p>Please check role mapping in auth users file.</p>
+</div>
+{% else %}
+<h2>
+    {% if session_role == 'parent' %}
+        Child Overview - {{ student.name }}
+    {% else %}
+        Welcome {{ student.name }}
+    {% endif %}
+</h2>
+
+<div style="display:flex; gap:20px; flex-wrap:wrap;">
+    <div class="card" style="width:230px;">
+        <h3>Today's Status</h3>
+        <p style="font-size:20px; margin:0;">{{ today_status }}</p>
+    </div>
+
+    <div class="card" style="width:230px;">
+        <h3>Total Attendance</h3>
+        <p style="font-size:20px; margin:0;">{{ total_records }}</p>
+    </div>
+
+    <div class="card" style="width:230px;">
+        <h3>This Month</h3>
+        <p style="font-size:20px; margin:0;">{{ this_month_records }}</p>
+    </div>
+
+    <div class="card" style="width:280px;">
+        <h3>Latest Mark</h3>
+        <p style="margin:0; font-size:16px;">
+            {% if latest_mark %}
+                {{ latest_mark[0] }} at {{ latest_mark[1] }}
+            {% else %}
+                No mark yet
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Student Details</h3>
+    <p><b>Student ID:</b> {{ selected_student_id }}</p>
+    <p><b>Branch:</b> {{ student.branch }}</p>
+    <p><b>Year:</b> {{ student.year }}</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parent Login</title>
+
+    <style>
+        body {
+            background: linear-gradient(to right, #14532d, #1e7f52);
+            font-family: Arial;
+        }
+
+        .login-box {
+            width: 350px;
+            margin: 120px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #14532d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            background: #1e7f52;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(20,83,45,0.3);
+        }
+
+        .error {
+            color: red;
+        }
+
+        .links a {
+            color: #14532d;
+            text-decoration: none;
+            margin: 0 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-box">
+    <h2>Parent Login</h2>
+
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        <input type="text" name="username" placeholder="Parent Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+
+    <p class="links" style="margin-top:15px;">
+        <a href="/login/student">Student</a>
+        <a href="/login">Portal</a>
+    </p>
+</div>
+
+</body>
+</html>

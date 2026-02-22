@@ -1,0 +1,26 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>Attendance Records</h2>
+
+<table border="1" cellpadding="10"
+       style="background:white;border-collapse:collapse;width:90%">
+<tr style="background:#003366;color:white">
+    <th>Student ID</th>
+    <th>Name</th>
+    <th>Date</th>
+    <th>Time</th>
+</tr>
+
+{% for a in attendance %}
+<tr>
+    <td>{{ a.student_id }}</td>
+    <td>{{ a.name }}</td>
+    <td>{{ a.date }}</td>
+    <td>{{ a.time }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

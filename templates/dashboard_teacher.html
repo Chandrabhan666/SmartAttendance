@@ -1,0 +1,55 @@
+{% extends "layout_teacher.html" %}
+{% block content %}
+
+<h2>{{ 'Admin Dashboard' if session_role == 'admin' else 'Teacher Dashboard' }}</h2>
+
+<div style="display:flex; gap:20px; flex-wrap:wrap;">
+
+    <div class="card" style="width:220px;">
+        <h3>Total Students</h3>
+        <h1>{{ total_students }}</h1>
+    </div>
+
+    <div class="card" style="width:220px;">
+        <h3>Total Attendance</h3>
+        <h1>{{ total_records }}</h1>
+    </div>
+
+    <div class="card" style="width:220px;">
+        <h3>Today Present</h3>
+        <h1>{{ today_attendance }}</h1>
+    </div>
+
+    <div class="card" style="width:220px;">
+        <h3>Today Absent</h3>
+        <h1>{{ today_absent }}</h1>
+    </div>
+
+</div>
+
+<br>
+<a href="/mark-attendance" class="btn">Mark Attendance (Face)</a>
+
+<div class="card" style="margin-top:20px;">
+    <h3>Recent Attendance Activity</h3>
+    <table>
+        <tr>
+            <th>Student ID</th>
+            <th>Date</th>
+            <th>Time</th>
+        </tr>
+        {% for sid, d, t in recent_records %}
+        <tr>
+            <td>{{ sid }}</td>
+            <td>{{ d }}</td>
+            <td>{{ t }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No attendance records</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% endblock %}
