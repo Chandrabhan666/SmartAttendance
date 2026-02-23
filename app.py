@@ -11,6 +11,8 @@ import os
 import random
 import requests
 import numpy as np
+import smtplib
+from email.message import EmailMessage
 
 try:
     import cv2
@@ -120,6 +122,113 @@ def load_json(file, default):
             json.dump(default, f, indent=4)
     with open(file, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _is_truthy(value):
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_student_contact_targets(student_id):
+    data = load_json(STUDENT_FILE, {})
+    info = data.get(str(student_id), {})
+    emails = []
+    phones = []
+
+    for key in ("email", "parent_email"):
+        val = str(info.get(key, "")).strip()
+        if val:
+            emails.append(val)
+
+    for key in ("phone", "parent_phone"):
+        val = str(info.get(key, "")).strip()
+        if val:
+            phones.append(val)
+
+    # de-duplicate while preserving order
+    emails = list(dict.fromkeys(emails))
+    phones = list(dict.fromkeys(phones))
+    return emails, phones, info
+
+
+def _send_email_notification(to_email, subject, message):
+    smtp_host = os.environ.get("SMTP_HOST", "").strip()
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER", "").strip()
+    smtp_pass = os.environ.get("SMTP_PASS", "").strip()
+    smtp_from = os.environ.get("SMTP_FROM", smtp_user).strip()
+    use_tls = _is_truthy(os.environ.get("SMTP_USE_TLS", "true"))
+
+    if not (smtp_host and smtp_user and smtp_pass and smtp_from):
+        return False, "SMTP not configured"
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = smtp_from
+        msg["To"] = to_email
+        msg.set_content(message)
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            if use_tls:
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        return True, "sent"
+    except Exception as exc:
+        return False, f"email error: {exc}"
+
+
+def _send_sms_notification(to_phone, message):
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    from_phone = os.environ.get("TWILIO_FROM_PHONE", "").strip()
+
+    if not (account_sid and auth_token and from_phone):
+        return False, "Twilio not configured"
+
+    try:
+        url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+        payload = {"From": from_phone, "To": to_phone, "Body": message}
+        resp = requests.post(url, data=payload, auth=(account_sid, auth_token), timeout=20)
+        if resp.status_code in (200, 201):
+            return True, "sent"
+        return False, f"sms error: {resp.status_code}"
+    except Exception as exc:
+        return False, f"sms error: {exc}"
+
+
+def send_attendance_notifications(student_id, status, date_text, time_text=""):
+    emails, phones, info = _get_student_contact_targets(student_id)
+    student_name = info.get("name") or student_id
+    status_text = "PRESENT" if status == "present" else "ABSENT"
+    message = (
+        f"SmartAttendance Update\n"
+        f"Student: {student_name} ({student_id})\n"
+        f"Status: {status_text}\n"
+        f"Date: {date_text}\n"
+    )
+    if time_text:
+        message += f"Time: {time_text}\n"
+
+    subject = f"Attendance {status_text}: {student_name}"
+    result = {
+        "emails_sent": 0,
+        "sms_sent": 0,
+        "emails_total": len(emails),
+        "sms_total": len(phones),
+    }
+
+    for email in emails:
+        ok, _ = _send_email_notification(email, subject, message)
+        if ok:
+            result["emails_sent"] += 1
+
+    for phone in phones:
+        ok, _ = _send_sms_notification(phone, message)
+        if ok:
+            result["sms_sent"] += 1
+
+    return result
 
 
 def current_role():
@@ -682,6 +791,7 @@ def _mark_attendance_once(student_id):
         )
     )
     db.session.commit()
+    send_attendance_notifications(student_id, "present", now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"))
     return True, "Attendance marked successfully."
 
 
@@ -754,6 +864,24 @@ def mark_attendance_manual():
     if ok:
         return redirect(f"/teacher/dashboard?status={msg}")
     return redirect(f"/teacher/dashboard?error={msg}")
+
+
+@app.route("/teacher/send-absent-alerts", methods=["POST"])
+@require_roles("teacher", "admin")
+def send_absent_alerts():
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    present_ids = {
+        row.student_id for row in db.session.query(Attendance.student_id).filter_by(date=today).distinct().all()
+    }
+    all_students = Student.query.all()
+    absent_students = [s for s in all_students if s.student_id not in present_ids]
+
+    notified = 0
+    for student in absent_students:
+        send_attendance_notifications(student.student_id, "absent", today)
+        notified += 1
+
+    return redirect(f"/teacher/dashboard?status=Absent alerts sent for {notified} students.")
 
 
 @app.route("/teacher/monthly-graph")

@@ -9,12 +9,16 @@
   "12315493": {
     "name": "Priyam",
     "branch": "CSE",
-    "year": "3rd Year"
+    "year": "3rd Year",
+    "email": "priyam123@gmail.com",
+    "phone": "9876543210"
   },
 
   "12313534": {
     "name": "Arushree",
     "branch": "CSE",
-    "year": "3rd Year"
+    "year": "3rd Year",
+    "email": "arushree123@gmail.com",
+    "phone": "9876543211"
   }
 }

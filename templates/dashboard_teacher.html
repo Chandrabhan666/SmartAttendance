@@ -51,6 +51,12 @@
                style="padding:10px 12px; border:1px solid #ccc; border-radius:8px; min-width:220px;">
         <button type="submit" class="btn">Mark Manually</button>
     </form>
+    <form action="/teacher/send-absent-alerts" method="post" style="margin-top:12px;">
+        <button type="submit" class="btn" style="background:#8a1f11;">Send Today's Absent Alerts (SMS/Email)</button>
+    </form>
+    <p style="margin-top:8px; font-size:13px; color:#555;">
+        Requires contact fields in <code>student_data.json</code> and configured SMTP/Twilio environment variables.
+    </p>
 </div>
 
 <div class="card" style="margin-top:20px;">
