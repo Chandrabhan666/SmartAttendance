@@ -769,6 +769,8 @@ def _load_face_tools():
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     recognizer.read("model/face_model.xml")
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    if face_cascade.empty():
+        return None, None, "Face detector could not be loaded."
     return recognizer, face_cascade, None
 
 
@@ -793,6 +795,39 @@ def _mark_attendance_once(student_id):
     db.session.commit()
     send_attendance_notifications(student_id, "present", now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"))
     return True, "Attendance marked successfully."
+
+
+def _normalize_face_roi(face_roi):
+    resized = cv2.resize(face_roi, (200, 200))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(resized)
+    return cv2.GaussianBlur(enhanced, (3, 3), 0)
+
+
+def _recognize_student_from_frame(frame, recognizer, face_cascade):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.15,
+        minNeighbors=6,
+        minSize=(80, 80),
+    )
+    if len(faces) == 0:
+        return None, None, "No face detected. Keep face centered and closer to camera."
+    if len(faces) > 1:
+        return None, None, "Multiple faces detected. Keep only one face in frame."
+
+    x, y, w, h = max(faces, key=lambda face: face[2] * face[3])
+    normalized_roi = _normalize_face_roi(gray[y: y + h, x: x + w])
+    sid_label, confidence = recognizer.predict(normalized_roi)
+    sid = str(sid_label)
+
+    if confidence > 68:
+        return None, float(confidence), "Face not recognized. Move closer and face the camera directly."
+    if not Student.query.filter_by(student_id=sid).first():
+        return None, float(confidence), "Recognized face does not match a valid student."
+    return sid, float(confidence), None
 
 
 @app.route("/teacher/face-attendance")
