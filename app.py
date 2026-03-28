@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import Flask, render_template, request, redirect, session, send_from_directory, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import datetime
@@ -14,6 +14,7 @@ import numpy as np
 import smtplib
 from email.message import EmailMessage
 import threading
+import time
 
 try:
     import cv2
@@ -62,6 +63,20 @@ os.makedirs(NOTES_DIR, exist_ok=True)
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 db = SQLAlchemy(app)
+
+def _query_with_retry(fn, *, retries=2, delay_seconds=0.7):
+    """Small retry for transient DB connectivity issues (Render cold starts, pool hiccups)."""
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            return fn()
+        except OperationalError as exc:
+            last_exc = exc
+            app.logger.warning("DB OperationalError (attempt %s/%s): %s", attempt, retries, exc)
+            if attempt < retries:
+                time.sleep(delay_seconds * attempt)
+    # Re-raise after final attempt so callers can handle consistently.
+    raise last_exc  # type: ignore[misc]
 
 
 class Student(db.Model):
@@ -491,8 +506,9 @@ def login_student():
         password = request.form["password"]
 
         try:
-            user = User.query.filter_by(role="student", username=sid).first()
+            user = _query_with_retry(lambda: User.query.filter_by(role="student", username=sid).first())
         except SQLAlchemyError:
+            app.logger.exception("DB error during student login")
             return render_template("login_student.html", error="Server busy. Please try again in a few seconds.")
 
         if user and user.password == password:
@@ -514,8 +530,9 @@ def login_parent():
         password = request.form["password"]
 
         try:
-            parent_rows = User.query.filter_by(role="parent", username=username).all()
+            parent_rows = _query_with_retry(lambda: User.query.filter_by(role="parent", username=username).all())
         except SQLAlchemyError:
+            app.logger.exception("DB error during parent login")
             return render_template("login_parent.html", error="Server busy. Please try again in a few seconds.")
         if parent_rows and parent_rows[0].password == password:
             linked_students = [row.linked_student_id for row in parent_rows if row.linked_student_id]
@@ -539,8 +556,9 @@ def login_teacher():
         password = request.form["password"]
 
         try:
-            user = User.query.filter_by(role="teacher", username=username).first()
+            user = _query_with_retry(lambda: User.query.filter_by(role="teacher", username=username).first())
         except SQLAlchemyError:
+            app.logger.exception("DB error during teacher login")
             return render_template("login_teacher.html", error="Server busy. Please try again in a few seconds.")
         if user and user.password == password:
             session.clear()
@@ -561,8 +579,9 @@ def login_admin():
         password = request.form["password"]
 
         try:
-            user = User.query.filter_by(role="admin", username=username).first()
+            user = _query_with_retry(lambda: User.query.filter_by(role="admin", username=username).first())
         except SQLAlchemyError:
+            app.logger.exception("DB error during admin login")
             return render_template("login_admin.html", error="Server busy. Please try again in a few seconds.")
         if user and user.password == password:
             session.clear()
