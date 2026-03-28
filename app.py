@@ -26,12 +26,19 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "college_secret_key")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
-NOTES_DIR = os.path.join(BASE_DIR, "notes")
-MODEL_DIR = os.path.join(BASE_DIR, "model")
-FACE_MODEL_PATH = os.path.join(MODEL_DIR, "face_model.xml")
+# Vercel's runtime filesystem is read-only except `/tmp`.
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+WRITABLE_DIR = "/tmp" if IS_VERCEL else BASE_DIR
 
-raw_db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'attendance.db')}")
+UPLOADS_DIR = os.path.join(WRITABLE_DIR, "uploads")
+NOTES_DIR = os.path.join(WRITABLE_DIR, "notes")
+
+# Face model is part of the repo (read-only on Vercel, but readable).
+READ_MODEL_DIR = os.path.join(BASE_DIR, "model")
+FACE_MODEL_PATH = os.path.join(READ_MODEL_DIR, "face_model.xml")
+
+default_sqlite_path = os.path.join(WRITABLE_DIR, "attendance.db") if IS_VERCEL else os.path.join(BASE_DIR, "attendance.db")
+raw_db_url = os.environ.get("DATABASE_URL", f"sqlite:///{default_sqlite_path}")
 if raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
@@ -57,9 +64,12 @@ STUDENT_FILE = os.path.join(BASE_DIR, "student_data.json")
 ANNOUNCEMENT_FILE = os.path.join(BASE_DIR, "announcements.json")
 SYLLABUS_FILE = os.path.join(BASE_DIR, "syllabus.json")
 
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(NOTES_DIR, exist_ok=True)
-os.makedirs(MODEL_DIR, exist_ok=True)
+for _d in (UPLOADS_DIR, NOTES_DIR):
+    try:
+        os.makedirs(_d, exist_ok=True)
+    except Exception:
+        # On serverless, we can still run fine if Supabase storage is configured.
+        pass
 
 db = SQLAlchemy(app)
 
@@ -805,6 +815,7 @@ def mark_attendance():
 
 
 def _load_face_tools():
+    # Cache face tools so we don't reload model/cascade every request (faster + more stable).
     if cv2 is None:
         return None, None, "OpenCV is not available on server."
     if not hasattr(cv2, "face"):
@@ -812,12 +823,27 @@ def _load_face_tools():
     if not os.path.exists(FACE_MODEL_PATH):
         return None, None, "Face model not found. Train model locally first."
 
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    recognizer.read(FACE_MODEL_PATH)
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    if face_cascade.empty():
-        return None, None, "Face detector could not be loaded."
-    return recognizer, face_cascade, None
+    global _FACE_TOOLS_CACHE
+    try:
+        mtime = os.path.getmtime(FACE_MODEL_PATH)
+    except Exception:
+        mtime = None
+
+    with _FACE_TOOLS_CACHE["lock"]:
+        if _FACE_TOOLS_CACHE["recognizer"] is not None and _FACE_TOOLS_CACHE["cascade"] is not None:
+            if _FACE_TOOLS_CACHE["mtime"] == mtime:
+                return _FACE_TOOLS_CACHE["recognizer"], _FACE_TOOLS_CACHE["cascade"], None
+
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        recognizer.read(FACE_MODEL_PATH)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+        if face_cascade.empty():
+            return None, None, "Face detector could not be loaded."
+
+        _FACE_TOOLS_CACHE["recognizer"] = recognizer
+        _FACE_TOOLS_CACHE["cascade"] = face_cascade
+        _FACE_TOOLS_CACHE["mtime"] = mtime
+        return recognizer, face_cascade, None
 
 
 def _mark_attendance_once(student_id):
@@ -848,6 +874,9 @@ def _normalize_face_roi(face_roi):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     enhanced = clahe.apply(resized)
     return cv2.GaussianBlur(enhanced, (3, 3), 0)
+
+
+_FACE_TOOLS_CACHE = {"recognizer": None, "cascade": None, "mtime": None, "lock": threading.Lock()}
 
 
 def _recognize_student_from_frame(frame, recognizer, face_cascade):

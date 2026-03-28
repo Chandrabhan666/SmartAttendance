@@ -36,6 +36,16 @@ async function startCamera() {
             audio: false
         });
         video.srcObject = stream;
+        // Try enabling torch if device supports it (helps low light). Safe no-op on unsupported devices.
+        try {
+            const track = stream.getVideoTracks()[0];
+            if (track && track.getCapabilities) {
+                const caps = track.getCapabilities();
+                if (caps && caps.torch) {
+                    await track.applyConstraints({ advanced: [{ torch: true }] });
+                }
+            }
+        } catch (e) {}
         await new Promise((resolve) => {
             if (video.readyState >= 2) return resolve();
             video.onloadedmetadata = () => resolve();
