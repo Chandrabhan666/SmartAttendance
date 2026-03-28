@@ -24,7 +24,7 @@ CampusNexus-360 is a role-based academic portal with attendance tracking (manual
 - Face recognition: OpenCV (LBPH)
 - DB: SQLite (local) or Postgres (Supabase)
 - Storage: local folders (local) or Supabase Storage (cloud)
-- Hosting: Render (recommended), Vercel (serverless option)
+- Hosting: Render (recommended)
 
 ## 3. Project Structure
 
@@ -165,34 +165,9 @@ gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
 
 Note: Render free tier may sleep after inactivity. First request after sleep can take 30-60 seconds.
 
-## 9. Cloud Deployment (Vercel) (Serverless)
+## 9. Deployment Recommendation
 
-This repo includes:
-- `api/index.py` entrypoint
-- `vercel.json` routes
-
-### 9.1 Add environment variables in Vercel
-
-Same variables as Render:
-- `SECRET_KEY`
-- `DATABASE_URL`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET`
-
-### 9.2 Deploy
-
-1. Import the GitHub repo into Vercel
-2. Deploy
-3. Test health endpoint:
-   - `/healthz`
-4. Then open:
-   - `/login`
-
-Important notes for Vercel:
-- The filesystem is read-only except `/tmp`
-- SQLite fallback uses `/tmp` automatically on Vercel
-- Heavy OpenCV workloads can be slower on serverless than Render
+For this project (Flask + OpenCV), Render is recommended because it runs a long-lived web service reliably.
 
 ## 10. Notifications (Optional)
 
@@ -218,15 +193,9 @@ Note: Twilio may require verified numbers / paid balance (trial restrictions).
 
 - Free tier sleeping behavior; wait 30-60s and refresh
 
-### 11.3 Vercel error: FUNCTION_INVOCATION_FAILED
+### 11.3 Slow First Load
 
-Common causes:
-- Missing env vars in Vercel
-- DB unreachable during invocation
-- Using local filesystem paths (fixed in this repo using `/tmp` on Vercel)
-
-Check:
-- Vercel Deployment -> Functions Logs
+Render free tier may sleep after inactivity. The first request after sleep can take 30-60 seconds.
 
 ## 12. Security Notes
 

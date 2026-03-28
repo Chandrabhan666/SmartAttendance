@@ -26,19 +26,12 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "college_secret_key")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Vercel's runtime filesystem is read-only except `/tmp`.
-IS_VERCEL = bool(os.environ.get("VERCEL"))
-WRITABLE_DIR = "/tmp" if IS_VERCEL else BASE_DIR
+UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+NOTES_DIR = os.path.join(BASE_DIR, "notes")
+MODEL_DIR = os.path.join(BASE_DIR, "model")
+FACE_MODEL_PATH = os.path.join(MODEL_DIR, "face_model.xml")
 
-UPLOADS_DIR = os.path.join(WRITABLE_DIR, "uploads")
-NOTES_DIR = os.path.join(WRITABLE_DIR, "notes")
-
-# Face model is part of the repo (read-only on Vercel, but readable).
-READ_MODEL_DIR = os.path.join(BASE_DIR, "model")
-FACE_MODEL_PATH = os.path.join(READ_MODEL_DIR, "face_model.xml")
-
-default_sqlite_path = os.path.join(WRITABLE_DIR, "attendance.db") if IS_VERCEL else os.path.join(BASE_DIR, "attendance.db")
-raw_db_url = os.environ.get("DATABASE_URL", f"sqlite:///{default_sqlite_path}")
+raw_db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'attendance.db')}")
 if raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
@@ -64,12 +57,9 @@ STUDENT_FILE = os.path.join(BASE_DIR, "student_data.json")
 ANNOUNCEMENT_FILE = os.path.join(BASE_DIR, "announcements.json")
 SYLLABUS_FILE = os.path.join(BASE_DIR, "syllabus.json")
 
-for _d in (UPLOADS_DIR, NOTES_DIR):
-    try:
-        os.makedirs(_d, exist_ok=True)
-    except Exception:
-        # On serverless, we can still run fine if Supabase storage is configured.
-        pass
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(NOTES_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -392,7 +382,6 @@ _db_init_lock = threading.Lock()
 
 
 def ensure_db_initialized():
-    # Vercel runs Flask via serverless function invocations. Doing DB init at import time can crash the function.
     # Initialize lazily and allow retries if DB is temporarily unreachable.
     global _db_initialized
     if _db_initialized:
